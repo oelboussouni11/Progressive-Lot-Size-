@@ -4,24 +4,25 @@ import pandas as pd
 # Title for the app
 st.title("Progressive Lot Size and Adjusted Loss Support Calculator")
 
-# Sidebar inputs for number of trades, commission, and profit/loss
+# Sidebar inputs for number of trades, commission, profit/loss, and target win per trade
 num_trades = st.sidebar.slider("Number of Trades", min_value=1, max_value=20, value=11)
 commission_per_lot = st.sidebar.number_input("Commission per 1 Lot (in $)", min_value=0.0, value=1.5, step=0.1)
 profit_per_0_01_lot = st.sidebar.number_input("Profit/Loss per 0.01 Lot (in $)", min_value=0.0, value=1.0, step=0.1)
+target_win_per_trade = st.sidebar.number_input("Target Win per Trade (in $)", min_value=0.0, value=1.0, step=0.1)
 
 # Description for Progressive Lot Size Table
 st.write(f"""
 ### Progressive Lot Size Calculation
 This table shows the progression of lot sizes required for a strategy where:
-- Each win after a sequence of losses should recover all losses and yield a net cumulative profit of $1 per trade in the sequence.
-- Commission is ${commission_per_lot} per 1 lot per trade.
-- Profit/Loss without commission is ±${profit_per_0_01_lot} per 0.01 lot.
+- Each win after a sequence of losses should recover all losses and yield a net cumulative profit of **${target_win_per_trade}** per trade in the sequence.
+- Commission is **${commission_per_lot}** per 1 lot per trade.
+- Profit/Loss without commission is ±**${profit_per_0_01_lot}** per 0.01 lot.
 - Thus, net profit if win on L lots = ({profit_per_0_01_lot * 100 - commission_per_lot}) × L dollars.
 - Net loss if lose on L lots = (-{profit_per_0_01_lot * 100 + commission_per_lot}) × L dollars.
 
 **Key formula:**  
 After (n-1) losses with cumulative loss C_(n-1), the nth trade lot size L_n must satisfy:  
-`({profit_per_0_01_lot * 100 - commission_per_lot}) * L_n = n - C_(n-1)`
+`({profit_per_0_01_lot * 100 - commission_per_lot}) * L_n = {target_win_per_trade} - C_(n-1)`
 Where C_(n-1) is the sum of all losses so far.
 """)
 
@@ -31,7 +32,7 @@ data = []
 
 for n in range(1, num_trades + 1):
     # Calculate lot size for nth trade
-    L_n = (n - cumulative_loss) / (profit_per_0_01_lot * 100 - commission_per_lot)
+    L_n = (target_win_per_trade - cumulative_loss) / (profit_per_0_01_lot * 100 - commission_per_lot)
 
     # Calculate outcomes
     win_amount = (profit_per_0_01_lot * 100 - commission_per_lot) * L_n
@@ -43,10 +44,10 @@ for n in range(1, num_trades + 1):
     # Store data for display
     data.append({
         "Trade #": n,
-        "Desired Total Profit if Win": f"${n}",
+        "Desired Total Profit if Win": f"${target_win_per_trade * n:.2f}",
         "Lot Size (L)": round(L_n, 5),
         "If Win": f"${win_amount:,.4f}",
-        "Cumulative Profit if Win at This Trade": f"${n}",
+        "Cumulative Profit if Win at This Trade": f"${target_win_per_trade * n:.2f}",
         "If Lose": f"${lose_amount:,.4f}",
         "Cumulative Loss if Lose": f"${hypothetical_cumulative_loss:,.4f}"
     })
@@ -92,7 +93,7 @@ def calculate_loss_support_with_last_lot(plans):
         # Simulate losses until exceeding the maximum loss limit
         for n in range(1, 100):  # Simulate a maximum of 100 trades
             # Calculate lot size for nth trade
-            L_n = (n - cumulative_loss) / (profit_per_0_01_lot * 100 - commission_per_lot)
+            L_n = (target_win_per_trade - cumulative_loss) / (profit_per_0_01_lot * 100 - commission_per_lot)
 
             # Calculate loss for this trade
             lose_amount = -(profit_per_0_01_lot * 100 + commission_per_lot) * L_n
@@ -130,11 +131,11 @@ def calculate_loss_support_with_last_lot(plans):
 # Generate the Adjusted Loss Support Table with Last Trade Lot Size
 adjusted_table_with_last_lot = calculate_loss_support_with_last_lot(plans)
 
-# Display the Adjusted Loss Support Table with Last Trade Lot Size
+# Display the Adjusted Loss Support Table with Lot Size for Last Trade
 st.subheader("Adjusted Plan Loss Support Table with Lot Size for Last Trade")
 st.table(adjusted_table_with_last_lot)
 
-# Allow users to download the Adjusted Loss Support Table with Last Trade Lot Size
+# Allow users to download the Adjusted Loss Support Table with Lot Size for Last Trade
 csv = adjusted_table_with_last_lot.to_csv(index=False)
 st.download_button(
     label="Download Adjusted Table with Lot Size for Last Trade as CSV",
