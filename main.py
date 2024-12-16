@@ -14,16 +14,15 @@ target_win_per_trade = st.sidebar.number_input("Target Win per Trade (in $)", mi
 st.write(f"""
 ### Progressive Lot Size Calculation
 This table shows the progression of lot sizes required for a strategy where:
-- Each win after a sequence of losses should recover all losses and yield a net cumulative profit of **${target_win_per_trade}** per trade in the sequence.
+- Each win after a sequence of losses recovers all previous losses and ensures a net cumulative profit of **${target_win_per_trade} × Trade Number**.
 - Commission is **${commission_per_lot}** per 1 lot per trade.
 - Profit/Loss without commission is ±**${profit_per_0_01_lot}** per 0.01 lot.
 - Thus, net profit if win on L lots = ({profit_per_0_01_lot * 100 - commission_per_lot}) × L dollars.
 - Net loss if lose on L lots = (-{profit_per_0_01_lot * 100 + commission_per_lot}) × L dollars.
 
 **Key formula:**  
-After (n-1) losses with cumulative loss C_(n-1), the nth trade lot size L_n must satisfy:  
-`({profit_per_0_01_lot * 100 - commission_per_lot}) * L_n = {target_win_per_trade} - C_(n-1)`
-Where C_(n-1) is the sum of all losses so far.
+After (n-1) losses with cumulative loss \( C_(n-1) \), the nth trade lot size \( L_n \) must satisfy:  
+`({profit_per_0_01_lot * 100 - commission_per_lot}) × L_n = (n × {target_win_per_trade}) - C_(n-1)`
 """)
 
 # Initialize variables for Progressive Lot Size Calculation
@@ -32,7 +31,7 @@ data = []
 
 for n in range(1, num_trades + 1):
     # Calculate lot size for nth trade
-    L_n = (target_win_per_trade - cumulative_loss) / (profit_per_0_01_lot * 100 - commission_per_lot)
+    L_n = ((n * target_win_per_trade) - cumulative_loss) / (profit_per_0_01_lot * 100 - commission_per_lot)
 
     # Calculate outcomes
     win_amount = (profit_per_0_01_lot * 100 - commission_per_lot) * L_n
@@ -93,7 +92,7 @@ def calculate_loss_support_with_last_lot(plans):
         # Simulate losses until exceeding the maximum loss limit
         for n in range(1, 100):  # Simulate a maximum of 100 trades
             # Calculate lot size for nth trade
-            L_n = (target_win_per_trade - cumulative_loss) / (profit_per_0_01_lot * 100 - commission_per_lot)
+            L_n = ((n * target_win_per_trade) - cumulative_loss) / (profit_per_0_01_lot * 100 - commission_per_lot)
 
             # Calculate loss for this trade
             lose_amount = -(profit_per_0_01_lot * 100 + commission_per_lot) * L_n
@@ -103,7 +102,7 @@ def calculate_loss_support_with_last_lot(plans):
 
             # Track the lot size for the last supported trade
             if cumulative_loss <= -max_loss:
-                losses_supported = n-1  # Last trade before exceeding the limit
+                losses_supported = n - 1  # Last trade before exceeding the limit
                 break
             last_trade_lot_size = L_n
 
